@@ -14,7 +14,7 @@
         
         .influence-bar { transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .qte-bar { transition: left 0.035s linear; }
-        .event-log { scrollbar-width: thin; scrollbar-color: #64748b #1e2937; }
+        .event-log { scrollbar-width: thin; scrollbar-color: #64748b #1e2937; max-height: 180px; }
         
         .action-btn {
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -29,7 +29,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-200" onclick="initAudioIfNeeded()">
+<body class="bg-slate-950 text-slate-200">
     <div class="max-w-4xl mx-auto p-4">
         <!-- Header -->
         <div class="text-center mb-6">
@@ -62,8 +62,9 @@
                 </div>
             </div>
 
-            <!-- Center: Main Game -->
-            <div class="lg:col-span-7 bg-slate-900 rounded-2xl p-5 border border-slate-700">
+            <!-- Right Panel: Game Area -->
+            <div class="lg:col-span-7 bg-slate-900 rounded-2xl p-5 border border-slate-700 flex flex-col">
+                <!-- Influence -->
                 <div class="flex items-center justify-between mb-3">
                     <div>
                         <div class="text-xs text-slate-400">INFLUENCE ON FIFA</div>
@@ -81,7 +82,7 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
                     <button onclick="startSwingingQTE('truth')"
                             class="action-btn group flex flex-col items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-red-400 p-4 rounded-2xl">
                         <i class="fa-brands fa-x-twitter text-3xl text-red-400"></i>
@@ -109,471 +110,26 @@
                         </div>
                     </button>
                 </div>
-            </div>
 
-            <!-- Event Log -->
-            <div class="lg:col-span-12 bg-slate-900 rounded-2xl p-4 border border-slate-700">
-                <div class="flex items-center gap-2 mb-2 px-1">
-                    <i class="fa-solid fa-scroll text-slate-400"></i>
-                    <span class="text-xs font-bold tracking-widest text-slate-400">SECURE COMMS LOG</span>
-                </div>
-                <div id="event-log" 
-                     class="event-log h-40 overflow-y-auto text-xs font-mono bg-slate-950 rounded-lg p-3 space-y-1 border border-slate-800">
+                <!-- Secure Comms Log -->
+                <div class="flex-1 flex flex-col">
+                    <div class="flex items-center gap-2 mb-2 px-1">
+                        <i class="fa-solid fa-scroll text-slate-400"></i>
+                        <span class="text-xs font-bold tracking-widest text-slate-400">SECURE COMMS LOG</span>
+                    </div>
+                    <div id="event-log" 
+                         class="event-log flex-1 overflow-y-auto text-xs font-mono bg-slate-950 rounded-lg p-3 space-y-1 border border-slate-800">
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Audio elements -->
+    <audio id="win-audio" src="win.mp3" preload="auto"></audio>
 
     <!-- QTE Modal -->
     <div id="qte-modal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-[60]">
         <div class="bg-slate-900 border border-red-500/50 rounded-3xl p-8 max-w-md w-full mx-4">
             <div class="text-center mb-6">
-                <div id="qte-icon" class="text-4xl mb-2"></div>
-                <div id="qte-title" class="font-bold text-2xl"></div>
-                <div id="qte-subtitle" class="text-xs text-slate-400 mt-1"></div>
-            </div>
-            
-            <div class="mb-6">
-                <div class="text-xs text-center mb-2 text-slate-400">STOP THE BAR IN THE GREEN ZONE</div>
-                <div class="relative h-8 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-                    <div id="qte-bar" 
-                         class="absolute top-0 h-full w-8 bg-gradient-to-r from-red-500 to-yellow-400 rounded-full qte-bar"
-                         style="left: 0%; width: 12%"></div>
-                    <div id="green-zone" 
-                         class="absolute top-0 h-full bg-emerald-500/30 border-l-2 border-r-2 border-emerald-500"
-                         style="left: 30%; width: 40%;"></div>
-                </div>
-            </div>
-            
-            <button id="stop-btn"
-                    class="w-full py-4 bg-red-600 hover:bg-red-500 active:bg-red-700 transition font-bold text-lg rounded-2xl">
-                STOP THE SWING
-            </button>
-            
-            <div id="qte-feedback" class="text-center mt-4 text-sm font-bold hidden"></div>
-        </div>
-    </div>
-
-    <!-- Win/Lose Modal -->
-    <div id="end-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-8 max-w-md w-full mx-4 text-center">
-            <div id="end-content"></div>
-            <button onclick="restartGame()" 
-                    class="mt-6 w-full bg-white text-black font-bold py-3 rounded-2xl hover:bg-slate-200 transition">
-                PLAY AGAIN
-            </button>
-        </div>
-    </div>
-
-    <script>
-        let audioCtx;
-        let soundsEnabled = false;
-
-        function initAudioIfNeeded() {
-            if (soundsEnabled) return;
-            try {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-                soundsEnabled = true;
-                console.log("✅ Audio enabled");
-            } catch(e) {
-                console.log("Audio init failed", e);
-            }
-        }
-
-        function playClick() {
-            if (!soundsEnabled) return;
-            try {
-                const osc = audioCtx.createOscillator();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-                const gain = audioCtx.createGain();
-                gain.gain.value = 0.1;
-                osc.connect(gain).connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.05);
-            } catch(e) {}
-        }
-
-        function playTimerTick(isFast) {
-            if (!soundsEnabled) return;
-            try {
-                const osc = audioCtx.createOscillator();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(isFast ? 900 : 600, audioCtx.currentTime);
-                const gain = audioCtx.createGain();
-                gain.gain.value = 0.15;
-                osc.connect(gain).connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.08);
-            } catch(e) {}
-        }
-
-        function playPhoneRing() {
-            if (!soundsEnabled) return;
-            try {
-                let i = 0;
-                const interval = setInterval(() => {
-                    const osc = audioCtx.createOscillator();
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-                    const gain = audioCtx.createGain();
-                    gain.gain.value = 0.2;
-                    osc.connect(gain).connect(audioCtx.destination);
-                    osc.start();
-                    osc.stop(audioCtx.currentTime + 0.3);
-                    i++;
-                    if (i > 4) clearInterval(interval);
-                }, 400);
-            } catch(e) {}
-        }
-
-        function playCash() {
-            if (!soundsEnabled) return;
-            try {
-                const noise = audioCtx.createBufferSource();
-                const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.3, audioCtx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < buffer.length; i++) data[i] = Math.random() * 2 - 1;
-                noise.buffer = buffer;
-                const filter = audioCtx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.value = 800;
-                const gain = audioCtx.createGain();
-                gain.gain.value = 0.3;
-                noise.connect(filter).connect(gain).connect(audioCtx.destination);
-                noise.start();
-            } catch(e) {}
-        }
-
-        function playTyping() {
-            if (!soundsEnabled) return;
-            try {
-                const osc = audioCtx.createOscillator();
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(1200 + Math.random() * 600, audioCtx.currentTime);
-                const gain = audioCtx.createGain();
-                gain.gain.value = 0.08;
-                osc.connect(gain).connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.02);
-            } catch(e) {}
-        }
-
-        function playWin() {
-            if (!soundsEnabled) return;
-            try {
-                const notes = [523, 659, 784, 1047];
-                let i = 0;
-                const interval = setInterval(() => {
-                    const osc = audioCtx.createOscillator();
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(notes[i % notes.length], audioCtx.currentTime);
-                    const gain = audioCtx.createGain();
-                    gain.gain.value = 0.25;
-                    osc.connect(gain).connect(audioCtx.destination);
-                    osc.start();
-                    osc.stop(audioCtx.currentTime + 0.25);
-                    i++;
-                    if (i > 12) {
-                        clearInterval(interval);
-                        if ('speechSynthesis' in window) {
-                            const utterance = new SpeechSynthesisUtterance("Thank you FIFA! Great injustice reversed. Make FIFA great again!");
-                            utterance.pitch = 0.9;
-                            utterance.rate = 1.05;
-                            speechSynthesis.speak(utterance);
-                        }
-                    }
-                }, 180);
-            } catch(e) {}
-        }
-
-        function playLose() {
-            if (!soundsEnabled) return;
-            try {
-                const osc = audioCtx.createOscillator();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(220, audioCtx.currentTime);
-                const gain = audioCtx.createGain();
-                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 1.2);
-                osc.connect(gain).connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 1.5);
-            } catch(e) {}
-        }
-
-        // Game variables
-        let influence = 12;
-        let timeLeft = 60;
-        let timerInterval = null;
-        let gameOver = false;
-        let donorCooldownEnd = 0;
-
-        // DOM elements
-        const influenceEl = document.getElementById('influence');
-        const barEl = document.getElementById('influence-bar');
-        const timerEl = document.getElementById('timer');
-        const logEl = document.getElementById('event-log');
-        const statusBadge = document.getElementById('status-badge');
-        const donorBtn = document.getElementById('donor-btn');
-        const donorLabel = document.getElementById('donor-label');
-
-        const actionConfig = {
-            truth: { title: "Truth Social Blast", icon: '<i class="fa-brands fa-x-twitter text-red-400"></i>', base: 8, speed: 1.3, zoneStart: 22, zoneWidth: 56, perfectBonus: 5, missMax: 1 },
-            donor: { title: "Major Donor Pressure", icon: '<i class="fa-solid fa-handshake text-yellow-400"></i>', base: 18, speed: 2.3, zoneStart: 30, zoneWidth: 40, perfectBonus: 12, missMax: 2 },
-            hotline: { title: "HOTLINE TO INFANTINO", icon: '<i class="fa-solid fa-phone text-white"></i>', base: 28, speed: 3.9, zoneStart: 36, zoneWidth: 26, perfectBonus: 25, missMax: 3 }
-        };
-
-        function updateInfluence(newVal) {
-            influence = Math.max(0, Math.min(100, newVal));
-            influenceEl.textContent = Math.floor(influence);
-            barEl.style.width = influence + '%';
-            if (influence >= 100 && !gameOver) endGame(true);
-        }
-
-        function addLog(message, type = 'normal') {
-            const div = document.createElement('div');
-            div.className = `py-0.5 ${type === 'success' ? 'text-emerald-400' : type === 'danger' ? 'text-red-400' : 'text-slate-300'}`;
-            div.innerHTML = `<span class="text-slate-500">[${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}]</span> ${message}`;
-            logEl.appendChild(div);
-            logEl.scrollTop = logEl.scrollHeight;
-        }
-
-        function updateDonorButton() {
-            const now = Date.now();
-            if (now < donorCooldownEnd) {
-                const remaining = Math.ceil((donorCooldownEnd - now) / 1000);
-                donorBtn.disabled = true;
-                donorLabel.textContent = `Major Donor (${remaining}s)`;
-            } else {
-                donorBtn.disabled = false;
-                donorLabel.textContent = "Major Donor Pressure";
-            }
-        }
-
-        function startSwingingQTE(type) {
-            if (gameOver) return;
-            if (!soundsEnabled) initAudioIfNeeded();
-            
-            if (type === 'donor') {
-                const now = Date.now();
-                if (now < donorCooldownEnd) return;
-                donorCooldownEnd = now + 15000;
-                updateDonorButton();
-            }
-            
-            playClick();
-            const config = actionConfig[type];
-            const modal = document.getElementById('qte-modal');
-            const bar = document.getElementById('qte-bar');
-            const greenZone = document.getElementById('green-zone');
-            const stopBtn = document.getElementById('stop-btn');
-            const feedbackEl = document.getElementById('qte-feedback');
-
-            document.getElementById('qte-icon').innerHTML = config.icon;
-            document.getElementById('qte-title').textContent = config.title;
-            document.getElementById('qte-subtitle').textContent = `Expected: ~${config.base}–${config.base + config.perfectBonus} Influence`;
-
-            greenZone.style.left = config.zoneStart + '%';
-            greenZone.style.width = config.zoneWidth + '%';
-
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-
-            let position = 0;
-            let direction = 1;
-            let animationFrame;
-
-            function animate() {
-                position += direction * config.speed;
-                if (position >= 100) { position = 100; direction = -1; }
-                if (position <= 0) { position = 0; direction = 1; }
-                bar.style.left = position + '%';
-                animationFrame = requestAnimationFrame(animate);
-            }
-            animate();
-
-            stopBtn.onclick = () => {
-                cancelAnimationFrame(animationFrame);
-                stopBtn.disabled = true;
-                feedbackEl.classList.remove('hidden');
-
-                const zoneEnd = config.zoneStart + config.zoneWidth;
-                const isHit = position >= config.zoneStart && position <= zoneEnd;
-                
-                let points = 0;
-                let feedbackText = "";
-                let feedbackClass = "";
-
-                if (isHit) {
-                    const center = config.zoneStart + (config.zoneWidth / 2);
-                    const distFromCenter = Math.abs(position - center);
-                    const centerBonus = Math.max(0, Math.floor(config.perfectBonus * (1 - (distFromCenter / (config.zoneWidth / 2)))));
-                    points = config.base + centerBonus;
-                    
-                    if (centerBonus > config.perfectBonus * 0.7) {
-                        feedbackText = "PERFECT TIMING!";
-                        feedbackClass = "text-emerald-400";
-                    } else {
-                        feedbackText = "Good hit!";
-                        feedbackClass = "text-emerald-400";
-                    }
-                } else {
-                    points = config.missMax;
-                    feedbackText = "Missed it!";
-                    feedbackClass = "text-red-400";
-                }
-
-                feedbackEl.textContent = feedbackText;
-                feedbackEl.className = `text-center mt-4 text-sm font-bold ${feedbackClass}`;
-
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                    modal.classList.remove('flex');
-                    stopBtn.disabled = false;
-                    feedbackEl.classList.add('hidden');
-
-                    updateInfluence(influence + points);
-                    addLog(`${config.title}: ${feedbackText} (+${points})`, isHit ? 'success' : 'danger');
-                }, 900);
-            };
-
-            setTimeout(() => {
-                if (!modal.classList.contains('hidden')) {
-                    cancelAnimationFrame(animationFrame);
-                    modal.classList.add('hidden');
-                    modal.classList.remove('flex');
-                    if (!gameOver) {
-                        addLog("Call dropped. No commitment.", 'danger');
-                        updateInfluence(influence + Math.floor(config.missMax * 0.7));
-                    }
-                }
-            }, 7200);
-        }
-
-        function startTimer() {
-            clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                if (gameOver) return;
-                timeLeft--;
-                timerEl.textContent = timeLeft;
-                const isFast = timeLeft <= 10;
-                playTimerTick(isFast);
-                if (isFast) timerEl.classList.add('text-red-500', 'animate-pulse');
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    if (!gameOver) endGame(false);
-                }
-            }, 1000);
-        }
-
-        function endGame(won) {
-            gameOver = true;
-            clearInterval(timerInterval);
-            
-            if (won) {
-                playWin();
-                statusBadge.className = "px-2 py-0.5 bg-emerald-600 text-white text-[10px] rounded font-bold";
-                statusBadge.textContent = "ELIGIBLE TO PLAY";
-            } else {
-                playLose();
-            }
-            
-            const modal = document.getElementById('end-modal');
-            const content = document.getElementById('end-content');
-            
-            if (won) {
-                content.innerHTML = `
-                    <img src="Y94A9.jpg" class="w-full rounded-2xl mb-4 border border-emerald-500/50">
-                    <div class="text-emerald-400 text-5xl mb-3"><i class="fa-solid fa-tachometer-alt"></i></div>
-                    <div class="text-3xl font-black mb-2">BAN REVERSED!</div>
-                    <div class="text-emerald-400 mb-4">Balogun cleared for Belgium</div>
-                    <div class="bg-slate-800 rounded-xl p-4 text-left text-sm">
-                        <div class="italic">"Thank you to FIFA for doing what was right, and reversing a great injustice!"</div>
-                        <div class="text-right text-xs mt-2 text-slate-400">— President Trump</div>
-                    </div>
-                `;
-            } else {
-                content.innerHTML = `
-                    <div class="text-red-500 text-6xl mb-4"><i class="fa-solid fa-ban"></i></div>
-                    <div class="text-3xl font-black mb-2">SUSPENSION UPHELD</div>
-                    <div class="text-red-400 mb-4">Balogun sits out vs Belgium</div>
-                    <div class="bg-slate-800 rounded-xl p-4 text-sm">
-                        FIFA upheld the original decision. The controversy rages on.
-                    </div>
-                `;
-            }
-            
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function restartGame() {
-            document.getElementById('end-modal').classList.add('hidden');
-            document.getElementById('end-modal').classList.remove('flex');
-            
-            influence = 12;
-            timeLeft = 60;
-            gameOver = false;
-            donorCooldownEnd = 0;
-            
-            influenceEl.textContent = '12';
-            barEl.style.width = '12%';
-            timerEl.textContent = '60';
-            timerEl.classList.remove('text-red-500', 'animate-pulse');
-            statusBadge.className = "px-2 py-0.5 bg-red-600 text-white text-[10px] rounded font-bold";
-            statusBadge.textContent = "SUSPENDED";
-            
-            logEl.innerHTML = '';
-            
-            addLog("New briefing: Balogun red card confirmed.");
-            addLog("Mission: Get the ban reversed before Belgium kickoff.");
-            addLog("Major Donor has 15s cooldown.");
-            
-            startTimer();
-        }
-
-        function initGame() {
-            addLog("New briefing: Balogun red card confirmed.");
-            addLog("Mission: Get the ban reversed before Belgium kickoff.");
-            addLog("Click anywhere to enable sound. Major Donor has 15s cooldown.");
-            
-            // Auto-enable sound on first interaction
-            document.body.addEventListener('click', () => {
-                if (!soundsEnabled) initAudioIfNeeded();
-            }, { once: true });
-            
-            document.addEventListener('keydown', (e) => {
-                if (gameOver) return;
-                const key = e.key.toLowerCase();
-                if (key === 't') startSwingingQTE('truth');
-                if (key === 'd') startSwingingQTE('donor');
-                if (key === 'h') startSwingingQTE('hotline');
-            });
-            
-            setInterval(() => {
-                if (!gameOver) updateDonorButton();
-            }, 500);
-            
-            startTimer();
-        }
-
-        function updateDonorButton() {
-            const now = Date.now();
-            if (now < donorCooldownEnd) {
-                const remaining = Math.ceil((donorCooldownEnd - now) / 1000);
-                donorBtn.disabled = true;
-                donorLabel.textContent = `Major Donor (${remaining}s)`;
-            } else {
-                donorBtn.disabled = false;
-                donorLabel.textContent = "Major Donor Pressure";
-            }
-        }
-
-        window.onload = initGame;
-    </script>
-</body>
-</html>
+                <div id="
