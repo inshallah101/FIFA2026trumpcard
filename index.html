@@ -166,9 +166,21 @@
     </div>
 
     <script>
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let audioCtx;
+        let soundsEnabled = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            soundsEnabled = true;
+        }
 
         function playClick() {
+            if (!soundsEnabled) return;
             const osc = audioCtx.createOscillator();
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(800, audioCtx.currentTime);
@@ -180,6 +192,7 @@
         }
 
         function playTimerTick(isFast) {
+            if (!soundsEnabled) return;
             const osc = audioCtx.createOscillator();
             osc.type = 'sine';
             osc.frequency.setValueAtTime(isFast ? 900 : 600, audioCtx.currentTime);
@@ -191,6 +204,7 @@
         }
 
         function playPhoneRing() {
+            if (!soundsEnabled) return;
             let i = 0;
             const interval = setInterval(() => {
                 const osc = audioCtx.createOscillator();
@@ -207,6 +221,7 @@
         }
 
         function playCash() {
+            if (!soundsEnabled) return;
             const noise = audioCtx.createBufferSource();
             const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.3, audioCtx.sampleRate);
             const data = buffer.getChannelData(0);
@@ -222,6 +237,7 @@
         }
 
         function playTyping() {
+            if (!soundsEnabled) return;
             const osc = audioCtx.createOscillator();
             osc.type = 'square';
             osc.frequency.setValueAtTime(1200 + Math.random() * 600, audioCtx.currentTime);
@@ -233,6 +249,7 @@
         }
 
         function playWin() {
+            if (!soundsEnabled) return;
             const notes = [523, 659, 784, 1047];
             let i = 0;
             const interval = setInterval(() => {
@@ -258,6 +275,7 @@
         }
 
         function playLose() {
+            if (!soundsEnabled) return;
             const osc = audioCtx.createOscillator();
             osc.type = 'sine';
             osc.frequency.setValueAtTime(220, audioCtx.currentTime);
@@ -320,6 +338,8 @@
 
         function startSwingingQTE(type) {
             if (gameOver) return;
+            if (!soundsEnabled) initAudio();
+            
             if (type === 'donor') {
                 const now = Date.now();
                 if (now < donorCooldownEnd) return;
@@ -501,7 +521,11 @@
         function initGame() {
             addLog("New briefing: Balogun red card confirmed.");
             addLog("Mission: Get the ban reversed before Belgium kickoff.");
-            addLog("Major Donor has 15s cooldown. Sounds enabled!");
+            addLog("Click anywhere to enable sound. Major Donor has 15s cooldown.");
+            
+            document.addEventListener('click', () => {
+                if (!soundsEnabled) initAudio();
+            }, { once: true });
             
             document.addEventListener('keydown', (e) => {
                 if (gameOver) return;
