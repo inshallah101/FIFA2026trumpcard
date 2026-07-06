@@ -12,7 +12,7 @@ Use your "influence" to reverse Folarin Balogun's red card suspension before the
 
 ## Screenshots
 
-![Gameplay](screenshot1.png)  
+![Gameplay](screenshot1.JPG)  
 *Swing timing mini-game in action*
 
 
